@@ -3,7 +3,8 @@ import { getCollection } from 'astro:content';
 import Layout from '../layouts/Layout.astro';
 import RoleCard from '../components/RoleCard.astro';
 import EmptyState from '../components/EmptyState.astro';
-import { sortByNewest } from '../lib/jobs';
+import RoleFilters from '../components/RoleFilters.astro';
+import { getDepartments, getLocations, sortByNewest } from '../lib/jobs';
 import type { Job } from '../types/job';
 
 export const prerender = true;
@@ -12,6 +13,8 @@ const entries = await getCollection('jobs');
 const jobs: Job[] = sortByNewest(
     entries.map((entry) => ({ slug: entry.id, ...entry.data })),
 );
+const departments = getDepartments(jobs);
+const locations = getLocations(jobs);
 ---
 
 <Layout title="Caldova Careers — Open roles">
@@ -29,12 +32,78 @@ const jobs: Job[] = sortByNewest(
     {jobs.length === 0 ? (
       <EmptyState text="There are no open roles right now. Check back soon." />
     ) : (
+      <>
+      <RoleFilters departments={departments} locations={locations} />
       <div
         class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
         data-testid="roles-grid"
       >
-        {jobs.map((job) => <RoleCard job={job} />)}
+        {jobs.map((job) => (
+          <div data-role-item>
+            <RoleCard job={job} />
+          </div>
+        ))}
       </div>
+      <div hidden data-filter-empty>
+        <EmptyState text="No roles match your filters. Reset the filters to see all open roles." />
+      </div>
+      </>
     )}
   </div>
 </Layout>
+
+<script>
+  import { buildFilterParams, filterJobs, parseFilterParams } from '../lib/jobs';
+
+  const form = document.querySelector<HTMLFormElement>('[data-testid="role-filters"]');
+  const emptyState = document.querySelector<HTMLElement>('[data-filter-empty]');
+  const count = document.querySelector<HTMLElement>('[data-testid="filter-count"]');
+  const grid = document.querySelector<HTMLElement>('[data-testid="roles-grid"]');
+
+  if (form && emptyState && count && grid) {
+    const checkboxes = Array.from(form.querySelectorAll<HTMLInputElement>('input[type="checkbox"]'));
+    const items = Array.from(grid.querySelectorAll<HTMLElement>('[data-role-item]')).map((element) => {
+      const card = element.querySelector<HTMLElement>('[data-testid="role-card"]');
+      return {
+        element,
+        department: card?.dataset.department ?? '',
+        location: card?.dataset.location ?? '',
+      };
+    });
+
+    const readCriteria = () => ({
+      departments: checkboxes.filter((box) => box.checked && box.name === 'department').map((box) => box.value),
+      locations: checkboxes.filter((box) => box.checked && box.name === 'location').map((box) => box.value),
+    });
+
+    const apply = (criteria = readCriteria()) => {
+      const matches = new Set(filterJobs(items, criteria));
+      items.forEach((item) => {
+        item.element.hidden = !matches.has(item);
+      });
+      grid.hidden = matches.size === 0;
+      emptyState.hidden = matches.size !== 0;
+      count.textContent = `Showing ${matches.size} of ${items.length} roles`;
+
+      const query = buildFilterParams(criteria).toString();
+      history.replaceState(null, '', `${location.pathname}${query ? `?${query}` : ''}`);
+    };
+
+    const initial = parseFilterParams(new URLSearchParams(location.search));
+    checkboxes.forEach((box) => {
+      const selected = box.name === 'department' ? initial.departments : initial.locations;
+      box.checked = selected.includes(box.value);
+      box.addEventListener('change', () => apply());
+    });
+
+    form.querySelector('[data-testid="filter-reset"]')?.addEventListener('click', () => {
+      checkboxes.forEach((box) => {
+        box.checked = false;
+      });
+      apply();
+    });
+
+    // Honor URL values with no matching checkbox so they yield the empty state.
+    apply(initial);
+  }
+</script>

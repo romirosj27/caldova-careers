@@ -1,0 +1,61 @@
+---
+interface Props {
+    /** Department names to offer as filter options. */
+    departments: string[];
+    /** Location strings to offer as filter options. */
+    locations: string[];
+}
+
+const { departments, locations } = Astro.props;
+
+const groups = [
+    { name: 'department', legend: 'Department', options: departments },
+    { name: 'location', legend: 'Location', options: locations },
+];
+---
+
+<form
+    class="mb-8 rounded-xl border border-slate-700/50 bg-slate-800/60 p-6"
+    data-testid="role-filters"
+    aria-labelledby="role-filters-heading"
+>
+    <div class="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+        <h3 id="role-filters-heading" class="text-lg font-semibold text-slate-100">Filter roles</h3>
+        <p class="text-sm text-slate-400">Shows roles that match any selected department or location.</p>
+    </div>
+
+    <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+        {
+            groups.map((group) => (
+                <fieldset data-testid={`${group.name}-filter`} class="min-w-0">
+                    <legend class="mb-2 text-sm font-medium text-slate-200">{group.legend}</legend>
+                    <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                        {group.options.map((option) => (
+                            <label class="flex items-start gap-2 text-sm text-slate-300">
+                                <input
+                                    type="checkbox"
+                                    name={group.name}
+                                    value={option}
+                                    data-testid={`${group.name}-option`}
+                                    class="mt-0.5 h-4 w-4 rounded border-slate-500 bg-slate-900 accent-blue-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-800"
+                                />
+                                <span>{option}</span>
+                            </label>
+                        ))}
+                    </div>
+                </fieldset>
+            ))
+        }
+    </div>
+
+    <div class="mt-6 flex flex-wrap items-center gap-4">
+        <button
+            type="button"
+            data-testid="filter-reset"
+            class="rounded-lg border border-slate-600 px-4 py-2 text-sm font-medium text-slate-200 hover:border-blue-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+        >
+            Reset filters
+        </button>
+        <p class="text-sm text-slate-400" role="status" aria-live="polite" data-testid="filter-count"></p>
+    </div>
+</form>

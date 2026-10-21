@@ -16,6 +16,7 @@ const { job } = Astro.props;
     data-testid="role-card"
     data-job-id={job.slug}
     data-department={job.department}
+    data-location={job.location}
 >
     <div class="p-6">
         <h3
@@ -28,6 +29,7 @@ const { job } = Astro.props;
         <div class="flex flex-wrap gap-2 mb-3">
             <Tag color="blue" data-testid="role-department">{job.department}</Tag>
             <Tag color="slate">{job.type}</Tag>
+            <Tag color="slate" data-testid="role-location">{job.location}</Tag>
             {job.remote && <Tag color="slate">Remote</Tag>}
         </div>
 
